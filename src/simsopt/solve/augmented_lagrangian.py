@@ -345,6 +345,8 @@ def augmented_lagrangian_method(
 
         res = minimize(fun, x, method=minimize_method, options=options, 
                         jac=True, tol=argmin_tol)
+        
+        # Remove jac = True, change function to just return objective!!!!!!!!!!!!!!!
         # pr.disable()
         # ss = io.StringIO()
         # sortby = SortKey.TIME
