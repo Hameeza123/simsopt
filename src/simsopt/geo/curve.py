@@ -16,7 +16,7 @@ __all__ = ['Curve', 'JaxCurve', 'RotatedCurve', 'curves_to_vtk', 'create_equally
 
 @jit
 def centroid_pure(gamma, gammadash):
-    """
+    r"""
     This pure function is used in a Python+Jax implementation of formula for centroid.
 
     .. math::
@@ -30,7 +30,7 @@ def centroid_pure(gamma, gammadash):
 
 @jit
 def incremental_arclength_pure(d1gamma):
-    """
+    r"""
     This function is used in a Python+Jax implementation of the curve arc length formula.
 
     .. math::
@@ -47,7 +47,7 @@ incremental_arclength_vjp = jit(lambda d1gamma, v: vjp(lambda d1g: incremental_a
 
 @jit
 def kappa_pure(d1gamma, d2gamma):
-    """
+    r"""
     This function is used in a Python+Jax implementation of formula for curvature.
 
     .. math::
@@ -67,7 +67,7 @@ kappagrad1 = jit(lambda d1gamma, d2gamma: jacfwd(lambda d2g: kappa_pure(d1gamma,
 
 @jit
 def torsion_pure(d1gamma, d2gamma, d3gamma):
-    """
+    r"""
     This function is used in a Python+Jax implementation of formula for torsion.
 
     .. math::
@@ -454,7 +454,7 @@ class Curve(Optimizable):
         return dkappadash_by_dcoeff
 
     def centroid(self):
-        """ 
+        r""" 
         Compute the centroid of the curve
 
         .. math::
@@ -494,13 +494,11 @@ class JaxCurve(sopp.Curve, Curve):
 
         self.gammadash_pure = lambda x, q: jvp(lambda p: self.gamma_pure(x, p), (q,), (ones,))[1]
         self.gammadash_jax = jit(lambda x: self.gammadash_pure(x, points))
-        self.gammadash_impl_jax = jit(lambda x, p: self.gammadash_pure(x, p))
         self.dgammadash_by_dcoeff_jax = jit(jacfwd(self.gammadash_jax))
         self.dgammadash_by_dcoeff_vjp_jax = jit(lambda x, v: vjp(self.gammadash_jax, x)[1](v)[0])
 
         self.gammadashdash_pure = lambda x, q: jvp(lambda p: self.gammadash_pure(x, p), (q,), (ones,))[1]
         self.gammadashdash_jax = jit(lambda x: self.gammadashdash_pure(x, points))
-        self.gammadashdash_impl_jax = jit(lambda x, p: self.gammadashdash_pure(x, p))
         self.dgammadashdash_by_dcoeff_jax = jit(jacfwd(self.gammadashdash_jax))
         self.dgammadashdash_by_dcoeff_vjp_jax = jit(lambda x, v: vjp(self.gammadashdash_jax, x)[1](v)[0])
 
@@ -727,17 +725,6 @@ class RotatedCurve(sopp.Curve, Curve):
         This function returns the number of dofs associated to the curve.
         """
         return self.curve.num_dofs()
-    
-    def centroid(self):
-        """ 
-        Compute the centroid of the curve
-
-        .. math::
-            \mathbf{c} = \frac{1}{L} \int_0^L \mathbf{\gamma}(\phi) d\phi
-
-        where :math:`L` is the arclength of the curve.
-        """
-        return centroid_pure(self.gamma(), self.gammadash())
 
     def gamma_impl(self, gamma, quadpoints):
         r"""

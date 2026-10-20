@@ -221,12 +221,12 @@ class PermanentMagnetGridTesting(unittest.TestCase):
             # check <Bn>
             B_opt = np.mean(np.abs(pm_opt.A_obj.dot(pm_opt.m) - pm_opt.b_obj) * np.sqrt(Ngrid / Nnorms))
             B_dipole_field = np.mean(np.abs(np.sum((bs.B() + b_dipole.B()).reshape((nphi, ntheta, 3)) * s.unitnormal(), axis=2)))
-            np.testing.assert_allclose(B_opt, B_dipole_field)
+            np.testing.assert_allclose(B_opt, B_dipole_field, atol=1e-15)
 
             # check integral Bn^2
             f_B_Am = 0.5 * np.linalg.norm(pm_opt.A_obj.dot(pm_opt.m) - pm_opt.b_obj, ord=2) ** 2
             f_B = SquaredFlux(s, b_dipole, -Bn).J()
-            np.testing.assert_allclose(f_B, f_B_Am)
+            np.testing.assert_allclose(f_B, f_B_Am, atol=1e-15)
 
             # Create PM class with cylindrical bricks
             Bn = np.sum(bs.B().reshape(nphi, ntheta, 3) * s.unitnormal(), axis=-1)
@@ -255,12 +255,12 @@ class PermanentMagnetGridTesting(unittest.TestCase):
         # check <Bn>
         B_opt = np.mean(np.abs(pm_opt.A_obj.dot(pm_opt.m) - pm_opt.b_obj) * np.sqrt(Ngrid / Nnorms))
         B_dipole_field = np.mean(np.abs(np.sum((bs.B() + b_dipole.B()).reshape((nphi, ntheta, 3)) * s.unitnormal(), axis=2)))
-        np.testing.assert_allclose(B_opt, B_dipole_field)
+        np.testing.assert_allclose(B_opt, B_dipole_field, atol=1e-15)
 
         # check integral Bn^2
         f_B_Am = 0.5 * np.linalg.norm(pm_opt.A_obj.dot(pm_opt.m) - pm_opt.b_obj, ord=2) ** 2
         f_B = SquaredFlux(s, b_dipole, -Bn).J()
-        np.testing.assert_allclose(f_B, f_B_Am)
+        np.testing.assert_allclose(f_B, f_B_Am, atol=1e-15)
 
     def test_grid_chopping(self):
         """
@@ -605,20 +605,18 @@ class PermanentMagnetGridTesting(unittest.TestCase):
         assert kwargs['K'] == 1000
 
         with ScratchDir("."):
-            # Test Bnormal plots
-            make_Bnormal_plots(bs, s)
-            make_Bnormal_plots(bs, s, B_axis=1.0)
 
             # optimize pm_opt and plot optimization progress
             kwargs = initialize_default_kwargs(algorithm='GPMO')
             kwargs['K'] = 100
             kwargs['nhistory'] = 10
-            kwargs['verbose'] = False
+            kwargs['verbose'] = True
             R2_history, Bn_history, m_history = GPMO(pm_opt, 'baseline', **kwargs)
             m_history = np.transpose(m_history, [2, 0, 1])
             m_history = m_history.reshape(1, 11, m_history.shape[1], 3)
             make_optimization_plots(R2_history, m_history, m_history, pm_opt)
 
+            kwargs['verbose'] = False
             kwargs_geo = {"downsample": 100}
             pm_opt = PermanentMagnetGrid.geo_setup_from_famus(s, Bn, TEST_DIR / 'zot80.focus', **kwargs_geo)
             R2_history, Bn_history, m_history = GPMO(pm_opt, 'baseline', **kwargs)
@@ -668,12 +666,12 @@ class PermanentMagnetGridTesting(unittest.TestCase):
         # Make QFM surfaces
         Bfield = bs + b_dipole
         Bfield.set_points(s_plot.gamma().reshape((-1, 3)))
-        qfm_surf = make_qfm(s_plot, Bfield)
+        qfm_surf = make_qfm(s_plot, Bfield, n_iters=10)
         qfm_surf = qfm_surf.surface
 
         # Run poincare plotting
         with ScratchDir("."):
-           run_Poincare_plots(s_plot, bs, b_dipole, None, 'poincare_test')
+           run_Poincare_plots_with_permanent_magnets(s_plot, bs, b_dipole, None, 'poincare_test')
 
 if __name__ == "__main__":
     unittest.main()

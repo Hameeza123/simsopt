@@ -4,13 +4,11 @@ the permanent magnets functionality in the SIMSOPT code.
 """
 __all__ = [
            'initialize_coils_for_pm_optimization',
-           'make_optimization_plots', 'run_Poincare_plots',
+           'make_optimization_plots', 'run_Poincare_plots_with_permanent_magnets',
            'initialize_default_kwargs'
            ]
 
 import numpy as np
-from matplotlib import pyplot as plt
-import matplotlib.animation as animation
 from pathlib import Path
 
 def initialize_coils_for_pm_optimization(config_flag, TEST_DIR, s, out_dir=''):
@@ -31,8 +29,9 @@ def initialize_coils_for_pm_optimization(config_flag, TEST_DIR, s, out_dir=''):
         coils: List of Coil class objects.
     """
     from simsopt.geo import create_equally_spaced_curves
-    from simsopt.field import Current, Coil, coils_via_symmetries
+    from simsopt.field import Current, RegularizedCoil, coils_via_symmetries
     from simsopt.geo import curves_to_vtk
+    from simsopt.field.selffield import regularization_circ
     from simsopt.util.coil_optimization_helper_functions import read_focus_coils
 
     out_dir = Path(out_dir)
@@ -51,7 +50,7 @@ def initialize_coils_for_pm_optimization(config_flag, TEST_DIR, s, out_dir=''):
         base_currents += [total_current - sum(base_currents)]
         coils = []
         for i in range(ncoils):
-            coils.append(Coil(base_curves[i], base_currents[i]))
+            coils.append(RegularizedCoil(base_curves[i], base_currents[i], regularization_circ(0.05)))
 
     elif config_flag == 'qh':
         # generate planar TF coils
@@ -68,7 +67,8 @@ def initialize_coils_for_pm_optimization(config_flag, TEST_DIR, s, out_dir=''):
         total_current = Current(total_current)
         total_current.fix_all()
         base_currents += [total_current - sum(base_currents)]
-        coils = coils_via_symmetries(base_curves, base_currents, s.nfp, True)
+        regularizations = [regularization_circ(0.05) for _ in range(ncoils)]
+        coils = coils_via_symmetries(base_curves, base_currents, s.nfp, True, regularizations)
 
     elif config_flag == 'qa':
         # generate planar TF coils
@@ -84,7 +84,8 @@ def initialize_coils_for_pm_optimization(config_flag, TEST_DIR, s, out_dir=''):
         total_current = Current(total_current)
         total_current.fix_all()
         base_currents += [total_current - sum(base_currents)]
-        coils = coils_via_symmetries(base_curves, base_currents, s.nfp, True)
+        regularizations = [regularization_circ(0.05) for _ in range(ncoils)]
+        coils = coils_via_symmetries(base_curves, base_currents, s.nfp, True, regularizations)
     
     # fix all the coil shapes so only the currents are optimized
     for i in range(ncoils):
@@ -110,6 +111,9 @@ def make_optimization_plots(RS_history, m_history, m_proxy_history, pm_opt, out_
         pm_opt: PermanentMagnetGrid class object that was optimized.
         out_dir: Path or string for the output directory for saved files.
     """
+    from matplotlib import pyplot as plt
+    import matplotlib.animation as animation
+    
     out_dir = Path(out_dir)
 
     # Make plot of the relax-and-split convergence
@@ -188,7 +192,7 @@ def make_optimization_plots(RS_history, m_history, m_proxy_history, pm_opt, out_
             )
 
 
-def run_Poincare_plots(s_plot, bs, b_dipole, comm, filename_poincare, out_dir=''):
+def run_Poincare_plots_with_permanent_magnets(s_plot, bs, b_dipole, comm, filename_poincare, out_dir=''):
     """
     Wrapper function for making Poincare plots.
 
@@ -201,7 +205,7 @@ def run_Poincare_plots(s_plot, bs, b_dipole, comm, filename_poincare, out_dir=''
         out_dir: Path or string for the output directory for saved files.
     """
     from simsopt.field.magneticfieldclasses import InterpolatedField
-    from simsopt.util.coil_optimization_helper_functions import make_Bnormal_plots, trace_fieldlines
+    from simsopt.util.coil_optimization_helper_functions import trace_fieldlines
     # from simsopt.objectives import SquaredFlux
 
     out_dir = Path(out_dir)
@@ -213,20 +217,13 @@ def run_Poincare_plots(s_plot, bs, b_dipole, comm, filename_poincare, out_dir=''
     rrange = (np.min(rs) - r_margin, np.max(rs) + r_margin, n)
     phirange = (0, 2 * np.pi / s_plot.nfp, n * 2)
     zrange = (0, np.max(zs), n // 2)
-    degree = 4  # 2 is sufficient sometimes
-    # nphi = len(s_plot.quadpoints_phi)
-    # ntheta = len(s_plot.quadpoints_theta)
+    degree = 2  # 2 is sufficient sometimes
     bs.set_points(s_plot.gamma().reshape((-1, 3)))
     b_dipole.set_points(s_plot.gamma().reshape((-1, 3)))
-    # Bnormal = np.sum(bs.B().reshape((nphi, ntheta, 3)) * s_plot.unitnormal(), axis=2)
-    # Bnormal_dipole = np.sum(b_dipole.B().reshape((nphi, ntheta, 3)) * s_plot.unitnormal(), axis=2)
-    # f_B = SquaredFlux(s_plot, b_dipole, -Bnormal).J()
-    make_Bnormal_plots(bs, s_plot, out_dir, "biot_savart_pre_poincare_check")
-    make_Bnormal_plots(b_dipole, s_plot, out_dir, "dipole_pre_poincare_check")
-    make_Bnormal_plots(bs + b_dipole, s_plot, out_dir, "total_pre_poincare_check")
 
     bsh = InterpolatedField(
-        bs + b_dipole, degree, rrange, phirange, zrange, True, nfp=s_plot.nfp, stellsym=s_plot.stellsym
+        bs + b_dipole, degree, rrange, phirange, zrange, 
+        True, nfp=s_plot.nfp, stellsym=s_plot.stellsym
     )
     bsh.set_points(s_plot.gamma().reshape((-1, 3)))
     trace_fieldlines(bsh, 'bsh_PMs_' + filename_poincare, s_plot, comm, out_dir)
