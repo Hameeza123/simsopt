@@ -82,7 +82,7 @@ x, fnc, lag_mul = augmented_lagrangian_method(
 )
 end_time = time.time()
 proc0_print(f"Time taken: {end_time - start_time:.2f} seconds")
-surf.set_dofs(x)
+surf.x = x
 vmec.run()
 qs_final = np.asarray(qs_obj.residuals())
 

@@ -1,22 +1,20 @@
 import numpy as np
 from simsopt.geo import AspectRatio
 
+# Use .x (free DOFs only). get_dofs()/set_dofs() act on all DOFs and ignore fix().
 def _free_get(s):
-    return np.asarray(s.get_dofs())
+    return np.asarray(s.x)
 
 def _free_set(s, v):
-    s.set_dofs(np.asarray(v))
+    s.x = np.asarray(v, dtype=float)
 
-# Aspect-ratio constraint: residual = A(x) - target
+# Aspect-ratio constraint: residual = (A(x) - target) / scale
 class AspectConstraint:
-    def __init__(self, surf, target=7.0):
+    def __init__(self, surf, target=7.0, scale=1.0):
         self.surf = surf
         self.ar = AspectRatio(surf)
         self.target = float(target)
-
-        self._free_idx = getattr(surf, "_free_dof_idx", None)
-        if self._free_idx is not None:
-            self._free_idx = np.asarray(self._free_idx, dtype=int)
+        self.scale = float(scale)
 
     @property
     def x(self):
@@ -29,18 +27,21 @@ class AspectConstraint:
     def J(self):
         from simsopt._core.util import ObjectiveFailure
         try:
-            return float(self.ar.J()) - self.target
+            return (float(self.ar.J()) - self.target) / self.scale
         except ObjectiveFailure:
             return 1e10
 
 
-# QS constraint: one scalar per radius index k, residual = QS_ratio_residuals[k]
+# QS constraint: one scalar per radius index k, residual = QS profile at radii[k] / scale.
+# profile() sums the squared residuals over theta and phi for each radius;
+# residuals() is the flattened (ns * ntheta * nphi) vector, so indexing it by k is wrong.
 class QsConstraint:
-    def __init__(self, vmec, surf, qs_obj, k):
+    def __init__(self, vmec, surf, qs_obj, k, scale=1.0):
         self.vmec = vmec
         self.surf = surf
         self.qs = qs_obj
         self.k = int(k)
+        self.scale = float(scale)
 
     @property
     def x(self):
@@ -51,15 +52,14 @@ class QsConstraint:
         _free_set(self.surf, v)
 
     def _current_residual_k(self):
-        return float(np.asarray(self.qs.residuals())[self.k])
+        return float(np.asarray(self.qs.profile())[self.k])
 
     def J(self):
         try:
             self.vmec.run()
         except Exception:
             return 1e10
-        return self._current_residual_k()
-        # possibly add a threshold here
+        return self._current_residual_k() / self.scale
     # No dJ() method - finite difference solver will compute gradients automatically
 
 class MeanIotaConstraint:
@@ -72,11 +72,11 @@ class MeanIotaConstraint:
 
     @property
     def x(self):
-        return np.asarray(self.surf.get_dofs())
+        return _free_get(self.surf)
 
     @x.setter
     def x(self, v):
-        self.surf.set_dofs(np.asarray(v, dtype=float))
+        _free_set(self.surf, v)
 
     def _mean_iota(self):
         return float(self.vmec.mean_iota())

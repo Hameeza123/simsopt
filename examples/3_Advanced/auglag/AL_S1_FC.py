@@ -167,7 +167,7 @@ def main():
         surf.to_vtk(filename=str(run_dir / f"initial_surf_maxmode{max_mode}"))
         proc0_print(f"Initial AR: A(x0) = {vmec.aspect():.6f}, target = {A_target:.6f}")
         proc0_print(f"Initial QS obj: {qs_obj.total():.6e}")
-        proc0_print(f"Qs residuals at radii {radii}: {qs_obj.residuals()}")
+        proc0_print(f"QS profile at radii {radii}: {qs_obj.profile()}")
         proc0_print(f"Initial Mean iota: {vmec.mean_iota():.6f}, target = {mean_iota_term.target:.6f}")
         proc0_print(f"Starting AL optimization for max_mode={max_mode}")
 
@@ -188,12 +188,12 @@ def main():
         end_time = time.time()
         proc0_print(f"Time taken: {end_time - start_time:.2f} seconds")
 
-        surf.set_dofs(x)
+        surf.x = x
         vmec.run()
         proc0_print(f"Optimization finished for max_mode = {max_mode}")
         proc0_print(f"Final AR: A(x_final) = {vmec.aspect():.6f}, target = {A_target:.6f}")
         proc0_print(f"Final QS obj: {qs_obj.total():.6e}")
-        proc0_print(f"Qs residuals at radii {radii}: {qs_obj.residuals()}")
+        proc0_print(f"QS profile at radii {radii}: {qs_obj.profile()}")
         proc0_print(f"Final Mean iota: {vmec.mean_iota():.6f}, target = {mean_iota_term.target:.6f}")
 
         surf.to_vtk(filename=str(run_dir / f"final_surf_maxmode{max_mode}_LBFGS{args.maxiter}_AL{args.maxiter_lag}_"))

@@ -149,12 +149,12 @@ class CombinedState:
         self.bs = bs
 
     def get_x(self):
-        return np.concatenate((np.asarray(self.coil_obj.x), np.asarray(self.surf.get_dofs())))
+        return np.concatenate((np.asarray(self.coil_obj.x), np.asarray(self.surf.x)))
 
     def set_x(self, x):
         ncoil = len(self.coil_obj.x)
         self.coil_obj.x = np.asarray(x[:ncoil])
-        self.surf.set_dofs(np.asarray(x[ncoil:]))
+        self.surf.x = np.asarray(x[ncoil:])
         self.bs.set_points(self.surf.gamma().reshape((-1, 3)))
 
 
@@ -217,7 +217,7 @@ def main():
         proc0_print(f"=== max_mode={mode}: stage 1 ===")
         s1_constraints, qs = stage1_constraints(vmec, surf, mode, args)
         x1, _, _ = run_al(s1_constraints, args, args.stage1_iters, args.stage1_lag_iters)
-        surf.set_dofs(x1)
+        surf.x = x1
         vmec.run()
         if mpi.proc0_world:
             surf.to_vtk(str(mode_dir / "stage1_surf"))
