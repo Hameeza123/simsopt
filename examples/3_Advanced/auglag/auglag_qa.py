@@ -91,13 +91,6 @@ else:
     MAXITER = 50  # 1000 for high-resolution
     MAXITER_lag = 10  # 50 for high-resolution
 
-
-
-nphi = 4
-ntheta = 4
-MAXITER = 10
-MAXITER_lag = 5
-
 # Define the surface
 s = SurfaceRZFourier.from_vmec_input(
     filename,

@@ -47,7 +47,7 @@ prob = LeastSquaresProblem.from_tuples([(vmec.aspect, 6, 1),
 # Fourier modes of the boundary with m <= max_mode and |n| <= max_mode
 # will be varied in the optimization. A larger range of modes are
 # included in the VMEC and booz_xform calculations.
-for step in range(2, 4):
+for step in range(3):
     max_mode = step + 1
 
     # VMEC's mpol & ntor will be 3, 4, 5:
@@ -57,7 +57,6 @@ for step in range(2, 4):
     proc0_print("Beginning optimization with max_mode =", max_mode,
                 ", vmec mpol=ntor=", vmec.indata.mpol,
                 ". Previous vmec iteration = ", vmec.iter)
-
 
     # Define parameter space:
     surf.fix_all()

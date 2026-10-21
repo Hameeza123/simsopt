@@ -55,7 +55,7 @@ from pathlib import Path
 from simsopt.util import in_github_actions
 import time
 
-ncoils_choice = 3
+ncoils_choice = 5
 # Define the upper and lower bounds for the constraints
 LENGTH_TARGET = 14.5 / 6 * ncoils_choice 
 FLUX_THRESHOLD = 1e-15
@@ -90,10 +90,6 @@ else:
     ntheta = 32  # 64 for high-resolution
     MAXITER = 50  # 1500 for high-resolution
     MAXITER_lag = 10  # 50 for high-resolution
-nphi = 4
-ntheta = 4
-MAXITER = 3
-MAXITER_lag = 3
 
 # Define the surface
 s = SurfaceRZFourier.from_vmec_input(
